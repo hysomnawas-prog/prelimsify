@@ -1,5 +1,5 @@
 -- =========================================================
--- civils prime: SHARED SCOREBOARD
+-- PRELIMSIFY: SHARED SCOREBOARD
 -- Run this whole script in Supabase SQL Editor.
 -- =========================================================
 
@@ -7,7 +7,7 @@ create table if not exists public.test_scores (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
   project_number integer,
-  test_name text not null default 'civils prime Test',
+  test_name text not null default 'Prelimsify Test',
   marks numeric not null default 0,
   max_marks numeric not null default 0,
   percentage numeric not null default 0,
@@ -34,7 +34,7 @@ alter table public.test_scores add column if not exists completed_at timestamptz
 alter table public.test_scores add column if not exists created_at timestamptz not null default now();
 
 update public.test_scores
-set test_name = coalesce(nullif(test_name, ''), 'civils prime Test')
+set test_name = coalesce(nullif(test_name, ''), 'Prelimsify Test')
 where test_name is null or test_name = '';
 
 alter table public.test_scores alter column test_name set not null;

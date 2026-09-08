@@ -1,7 +1,7 @@
 from pathlib import Path
-p=Path('/mnt/data/civilsprime_work/js/app.js')
+p=Path('/mnt/data/prelimsify_work/js/app.js')
 s=p.read_text()
-s=s.replace("let supabaseUser = null;", "let supabaseUser = null;\nlet currentProfile = null;\nlet currentTestTitle = 'civils prime Test';")
+s=s.replace("let supabaseUser = null;", "let supabaseUser = null;\nlet currentProfile = null;\nlet currentTestTitle = 'Prelimsify Test';")
 s=s.replace("async function showTest(){\n  historySavedForSubmission = false;", "async function showTest(){\n  if (!requireSignedIn()) return;\n  historySavedForSubmission = false;")
 s=s.replace("function showHome(){\n  setTestPaletteVisibility(false);", "function showHome(){\n  setTestPaletteVisibility(false);")
 # Replace score history render/load block
@@ -58,7 +58,7 @@ async function saveScoreHistory(){
   const percentage=maxMarks?(marks/maxMarks)*100:0;
   const passMark=maxMarks*(PASS_PERCENT/100);
   const row={
-    title:(currentTestTitle||'civils prime Test').trim()||'civils prime Test',
+    title:(currentTestTitle||'Prelimsify Test').trim()||'Prelimsify Test',
     marks:Number(marks.toFixed(2)),max_marks:Number(maxMarks.toFixed(2)),percentage:Number(percentage.toFixed(2)),
     passed:marks>=passMark,correct:correctCount,wrong:wrongCount,unanswered:Math.max(0,total-answered),completed_at:new Date().toISOString()
   };
@@ -87,7 +87,7 @@ s=s.replace(old,newauth)
 marker='async function initSupabase(){'
 auth=r'''
 function usernameEmail(username){
-  return `${String(username).trim().toLowerCase()}@users.civilsprime.local`;
+  return `${String(username).trim().toLowerCase()}@users.prelimsify.local`;
 }
 function cleanUsername(v){
   return String(v||'').trim().toLowerCase().replace(/[^a-z0-9_.-]/g,'').slice(0,32);
@@ -117,7 +117,7 @@ async function signInWithUsername(username,password){
   const {data,error}=await supabaseClient.auth.signInWithPassword({email:usernameEmail(username),password});
   if(error)throw error;
   supabaseUser=data.user;
-  if(!(await loadCurrentProfile())) throw new Error('Your account is not permitted to use civils prime.');
+  if(!(await loadCurrentProfile())) throw new Error('Your account is not permitted to use Prelimsify.');
   closeAuthModal();
   return true;
 }

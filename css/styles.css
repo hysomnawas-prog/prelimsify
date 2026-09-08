@@ -1,5 +1,5 @@
 /* ==========================================================================
-   civils prime — "Liquid Glass" design system (2026)
+   Prelimsify — "Liquid Glass" design system (2026)
    Apple-inspired macOS/iOS glassmorphism, bento layout, spring hovers.
    All original class names/selectors are preserved so app.js / admin.js
    keep working untouched — only the visual language has been refactored.
@@ -478,7 +478,7 @@
   }
   .saved-title{font-family:var(--serif);font-weight:700;font-size:13px;}
   .saved-count{font-family:var(--mono);font-size:10px;color:var(--muted);}
-  .saved-list{display:flex;flex-direction:column;gap:6px;max-height:300px;overflow:auto;}
+  .saved-list{display:flex;flex-direction:column;gap:6px;max-height:300px;overflow-y:auto;overflow-x:hidden;}
   .saved-empty{color:var(--muted);font-family:var(--sans);font-size:11px;padding:8px 0;}
   .saved-item{
     display:grid;
@@ -982,7 +982,8 @@
   padding:16px;
   box-sizing:border-box;
   max-height:calc(100vh - 104px);
-  overflow:auto;
+  overflow-y:auto;
+  overflow-x:hidden;
 }
 .palette-title{font-family:var(--serif);font-weight:700;font-size:18px;margin-bottom:12px}
 .palette-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:8px;margin-bottom:16px}
@@ -1069,7 +1070,7 @@
 .history-head p{margin:4px 0 0;color:var(--ink-soft);font:12px var(--sans)}
 .history-count{font:700 12px var(--sans);color:var(--ink-soft)}
 .history-status{font:10px var(--sans);color:var(--ink-soft);text-align:right;margin-top:3px}
-.score-history-list{max-height:430px;overflow:auto}
+.score-history-list{max-height:430px;overflow-y:auto;overflow-x:hidden}
 .history-row{display:grid;grid-template-columns:minmax(190px,1.8fr) 105px 70px 170px 60px;gap:12px;align-items:center;padding:14px 24px;border-bottom:1px solid var(--rule-light);font:12px var(--sans);transition:background var(--spring-fast);}
 .history-row:hover{background:rgba(255,255,255,.35);}
 .history-row:last-child{border-bottom:0}

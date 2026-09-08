@@ -1,10 +1,10 @@
-// civils prime service worker.
+// Prelimsify service worker.
 // Strategy: NETWORK-FIRST for everything. This exists only to make the site
 // installable and to give a basic offline fallback — it must never cause an
 // old, buggy version of index.html/app.js/admin.js to be served over a newer
 // deployed one. Bump CACHE_VERSION whenever you want to force clients to
 // drop old cached files.
-const CACHE_VERSION = 'civilsprime-v1';
+const CACHE_VERSION = 'prelimsify-v1';
 const OFFLINE_URL = 'offline.html';
 
 const PRECACHE = [

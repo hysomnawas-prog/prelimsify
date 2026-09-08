@@ -1,4 +1,4 @@
--- civils prime: allow the admin to recover/view/manage all saved question sets.
+-- Prelimsify: allow the admin to recover/view/manage all saved question sets.
 -- Run this AFTER the main schema. It does not delete or alter existing questions.
 
 create policy "quiz_projects_select_admin"

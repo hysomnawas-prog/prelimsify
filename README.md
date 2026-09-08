@@ -1,6 +1,6 @@
-# civils prime — Build & Development History
+# Prelimsify — Build & Development History
 
-civils prime ("The Prelims sahchari") is a self-hosted UPSC-style test practice
+Prelimsify ("The Prelims sahchari") is a self-hosted UPSC-style test practice
 app: static frontend on GitHub Pages, Supabase as the backend (auth,
 database, and row-level security), installable as a PWA on phone and
 desktop. This document explains how it's built, why it's structured the way
@@ -211,7 +211,7 @@ described in §4.
 
 ### 5.5 Repo hygiene note
 
-The uploaded project contained a stale nested `civils prime/civils prime/`
+The uploaded project contained a stale nested `Prelimsify/Prelimsify/`
 folder holding an older copy of `index.html`/`app.js` (no admin link, old
 scoreboard code). It isn't served by GitHub Pages as long as the site's
 source is the repo root, but it's a trap for accidentally editing the

@@ -1,4 +1,4 @@
-# civils prime Supabase setup
+# Prelimsify Supabase setup
 
 1. In Supabase Authentication -> Providers -> Email, turn **Confirm email OFF** for username-only login.
 2. Run the complete `supabase_schema.sql` in Supabase SQL Editor.

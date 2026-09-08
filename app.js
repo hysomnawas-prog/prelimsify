@@ -10,12 +10,12 @@ const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_E2ghL9KbeoQ-GghejXbrQw_ie0wrjH_
 
 const SAVED_PROJECTS_TABLE = "quiz_projects";
 const TEST_HISTORY_TABLE = "test_history";
-const LOCAL_HISTORY_KEY = "civilsprime_score_history";
-const LOCAL_SAVED_PROJECTS_KEY = "civilsprime_saved_projects";
+const LOCAL_HISTORY_KEY = "prelimsify_score_history";
+const LOCAL_SAVED_PROJECTS_KEY = "prelimsify_saved_projects";
 let supabaseClient = null;
 let supabaseUser = null;
 let currentProfile = null;
-let currentTestTitle = 'civils prime Test';
+let currentTestTitle = 'Prelimsify Test';
 
 const DEFAULT_DATA = [
 {s:"SECTION A — ANCIENT HISTORY & ART/CULTURE"},
@@ -156,7 +156,7 @@ let testStarted = false;
 let testPaused = false;
 let historySavedForSubmission = false;
 
-const TEXT_ZOOM_KEY = 'civilsprime_text_zoom';
+const TEXT_ZOOM_KEY = 'prelimsify_text_zoom';
 const TEXT_ZOOM_MIN = 80;
 const TEXT_ZOOM_MAX = 140;
 const TEXT_ZOOM_STEP = 10;
@@ -222,7 +222,7 @@ function bindTrackpadGestures(){
   target.addEventListener('gestureend', (e) => { e.preventDefault(); });
 }
 
-const SESSION_KEY = 'civilsprime_active_test_v1';
+const SESSION_KEY = 'prelimsify_active_test_v1';
 let restoringSession = false;
 let restoredAnswers = {};
 let paletteCurrentIndex = 0;
@@ -505,7 +505,7 @@ async function saveScoreHistory(){
   const percentage=maxMarks?(marks/maxMarks)*100:0;
   const passMark=maxMarks*(PASS_PERCENT/100);
   const row={
-    title:(currentTestTitle||'civils prime Test').trim()||'civils prime Test',
+    title:(currentTestTitle||'Prelimsify Test').trim()||'Prelimsify Test',
     marks:Number(marks.toFixed(2)),max_marks:Number(maxMarks.toFixed(2)),percentage:Number(percentage.toFixed(2)),
     passed:marks>=passMark,correct:correctCount,wrong:wrongCount,unanswered:Math.max(0,total-answered),completed_at:new Date().toISOString()
   };
@@ -574,7 +574,7 @@ async function loadSavedProjects(){
 
 function makeProjectPaper(){
   return {
-    source: 'civilsprime-default-v1',
+    source: 'prelimsify-default-v1',
     title: document.getElementById('titleText')?.textContent || 'Question Set',
     questions: currentData,
     markCorrect: MARK_CORRECT,
@@ -953,7 +953,7 @@ function loadFromTextarea(){
 
 
 function usernameEmail(username){
-  return `${String(username).trim().toLowerCase()}@users.civilsprime.local`;
+  return `${String(username).trim().toLowerCase()}@users.prelimsify.local`;
 }
 function cleanUsername(v){
   return String(v||'').trim().toLowerCase().replace(/[^a-z0-9_.-]/g,'').slice(0,32);
@@ -1157,7 +1157,7 @@ async function moveBuiltInPaperToSavedProjects(){
 
   try{
     const defaultQuestions = DEFAULT_DATA;
-    const defaultSource = 'civilsprime-default-v1';
+    const defaultSource = 'prelimsify-default-v1';
 
     // If the built-in paper is already present, do not create a duplicate.
     const { data: projects, error: projectError } = await supabaseClient
