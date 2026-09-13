@@ -1,8 +1,20 @@
-# 🪟 Prelimsify — *The Prelims Sahchari*
+<div align="center">
 
-**A self-hosted, installable UPSC-style test-practice app** — static frontend on
-GitHub Pages, Supabase for auth + database + row-level security, wrapped in an
-Apple-inspired **"Liquid Glass"** design system.
+# 🪟 Prelimsify
+### *The Prelims Sahchari*
+
+**A self-hosted, installable UPSC-style test-practice app**
+
+![Frontend](https://img.shields.io/badge/Frontend-HTML%20%2F%20CSS%20%2F%20JS-0A84FF?style=for-the-badge)
+![Backend](https://img.shields.io/badge/Backend-Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)
+![Hosting](https://img.shields.io/badge/Hosting-GitHub%20Pages-5E5CE6?style=for-the-badge&logo=github&logoColor=white)
+![PWA](https://img.shields.io/badge/Installable-PWA-FF375F?style=for-the-badge)
+![Build](https://img.shields.io/badge/Build%20Step-None-20A83A?style=for-the-badge)
+
+</div>
+
+Static frontend on GitHub Pages, Supabase for auth + database + row-level security,
+wrapped in an Apple-inspired **"Liquid Glass"** design system.
 
 No build step. No server to maintain. Every rule about who can see or touch what
 data lives inside Postgres itself.
@@ -40,12 +52,12 @@ data lives inside Postgres itself.
 
 | Feature | Description |
 |---|---|
-| 🕐 **Timed tests** | Loads a question set (`.json` or a custom `.hysom` text format), renders a question palette, applies negative marking, and produces a pass/fail results screen. |
-| 💾 **Saved Projects** | Question sets can be saved and re-attempted or re-shared later without re-uploading the source file. |
-| 🏆 **Score history / Score Board** | Every completed test is logged privately, and a shared board shows everyone's results. |
-| 👤 **Accounts** | Username-based sign-up/login via Supabase Auth (email confirmation disabled → behaves like plain username + password). |
-| 🛡️ **Admin panel** | A separate `admin.html` page — an `admin`-role account can view every user, grant/revoke `can_use_app`, and manage any user's saved projects. |
-| 📲 **Installable (PWA)** | The same site installs to a phone home screen or desktop while remaining a normal website. |
+| 🕐 ![](https://img.shields.io/badge/-Timed%20tests-0A84FF) | Loads a question set (`.json` or a custom `.hysom` text format), renders a question palette, applies negative marking, and produces a pass/fail results screen. |
+| 💾 ![](https://img.shields.io/badge/-Saved%20Projects-5E5CE6) | Question sets can be saved and re-attempted or re-shared later without re-uploading the source file. |
+| 🏆 ![](https://img.shields.io/badge/-Score%20Board-FF9F0A) | Every completed test is logged privately, and a shared board shows everyone's results. |
+| 👤 ![](https://img.shields.io/badge/-Accounts-30D158) | Username-based sign-up/login via Supabase Auth (email confirmation disabled → behaves like plain username + password). |
+| 🛡️ ![](https://img.shields.io/badge/-Admin%20panel-FF375F) | A separate `admin.html` page — an `admin`-role account can view every user, grant/revoke `can_use_app`, and manage any user's saved projects. |
+| 📲 ![](https://img.shields.io/badge/-Installable%20PWA-64D2FF) | The same site installs to a phone home screen or desktop while remaining a normal website. |
 
 ---
 
@@ -89,6 +101,8 @@ Every piece of the app is one of these seven modules. Click a heading below to j
 
 ## 3 · Module: `index.html` — the app shell
 
+<img src="https://img.shields.io/badge/markup-HTML5-0A84FF?logo=html5&logoColor=white" />
+
 `index.html` is pure markup — no inline logic beyond wiring up scripts. It's built as a
 stack of **overlays and screens** that `app.js` shows/hides rather than separate pages,
 so navigation feels instant (no reload, no route changes):
@@ -114,32 +128,37 @@ theme-color) and the Supabase JS CDN `<script>` tag that `app.js` depends on.
 
 ## 4 · Module: `js/app.js` — the engine
 
-The single largest file in the project (**~1,735 lines**) and the brain of the whole
+<img src="https://img.shields.io/badge/language-JavaScript-F7DF1E?logo=javascript&logoColor=black" /> <img src="https://img.shields.io/badge/size-~1735%20lines-5E5CE6" />
+
+The single largest file in the project and the brain of the whole
 app. It has no framework and no build step — everything runs as plain functions wired
 to DOM events. Grouped by responsibility:
 
 | Group | Representative functions | What it does |
 |---|---|---|
-| **Zoom & gestures** | `getTextZoom`, `applyTextZoom`, `changeTextZoom`, `bindTrackpadGestures` | Lets a user pinch/zoom the question text without zooming the whole page. |
-| **Session persistence** | `saveTestSession`, `restoreTestSession`, `clearTestSession` | Snapshots an in-progress test to `localStorage` so a refresh doesn't lose answers. |
-| **Screen navigation** | `showTest`, `showHome`, `exitTestToUploadPage` | Swaps which overlay/screen is visible — the app's "router." |
-| **Pause / timer** | `pauseTest`, `resumeTest`, `togglePauseTest`, `startTimer`, `formatTime` | Countdown timer with a genuine pause (not just a display freeze). |
-| **Score history** | `loadScoreHistory`, `saveScoreHistory`, `renderScoreHistory` | Reads/writes `test_history` in Supabase, mirrored to `localStorage`. |
-| **Saved Projects** | `loadSavedProjects`, `saveCurrentQuestionSet`, `deleteSavedProject`, `renameSavedProject`, `renderSavedProjects` | The **local-first sync** system — see §10 below. |
-| **Question parsing** | `parseHysom`, `cleanHysomLine`, `validateData`, `loadQuestionSet`, `loadFromTextarea`, `loadHysomFromTextarea` | Converts pasted JSON or `.hysom` text into the internal question-set format, with validation and error messaging. |
-| **Auth** | `signInWithUsername`, `createUsernameAccount`, `renameCurrentUsername`, `logoutCurrentUser`, `loadCurrentProfile`, `usernameEmail`, `initSupabase` | Wraps Supabase Auth behind a **username**, not an email — internally maps `username` → a synthetic email address Supabase accepts. |
-| **Quiz engine** | `buildQuiz`, `renderQuestionPalette`, `clearQuestionResponse`, `updateScore`, `lockPaper`, `submitPaper`, `finalizeResult` | Renders questions/options, tracks answers, applies negative marking live, and computes the final result. |
+| 🔍 **Zoom & gestures** | `getTextZoom`, `applyTextZoom`, `changeTextZoom`, `bindTrackpadGestures` | Lets a user pinch/zoom the question text without zooming the whole page. |
+| 💾 **Session persistence** | `saveTestSession`, `restoreTestSession`, `clearTestSession` | Snapshots an in-progress test to `localStorage` so a refresh doesn't lose answers. |
+| 🧭 **Screen navigation** | `showTest`, `showHome`, `exitTestToUploadPage` | Swaps which overlay/screen is visible — the app's "router." |
+| ⏱️ **Pause / timer** | `pauseTest`, `resumeTest`, `togglePauseTest`, `startTimer`, `formatTime` | Countdown timer with a genuine pause (not just a display freeze). |
+| 🏆 **Score history** | `loadScoreHistory`, `saveScoreHistory`, `renderScoreHistory` | Reads/writes `test_history` in Supabase, mirrored to `localStorage`. |
+| 📁 **Saved Projects** | `loadSavedProjects`, `saveCurrentQuestionSet`, `deleteSavedProject`, `renameSavedProject`, `renderSavedProjects` | The **local-first sync** system — see §10 below. |
+| 📝 **Question parsing** | `parseHysom`, `cleanHysomLine`, `validateData`, `loadQuestionSet`, `loadFromTextarea`, `loadHysomFromTextarea` | Converts pasted JSON or `.hysom` text into the internal question-set format, with validation and error messaging. |
+| 🔐 **Auth** | `signInWithUsername`, `createUsernameAccount`, `renameCurrentUsername`, `logoutCurrentUser`, `loadCurrentProfile`, `usernameEmail`, `initSupabase` | Wraps Supabase Auth behind a **username**, not an email — internally maps `username` → a synthetic email address Supabase accepts. |
+| 🎯 **Quiz engine** | `buildQuiz`, `renderQuestionPalette`, `clearQuestionResponse`, `updateScore`, `lockPaper`, `submitPaper`, `finalizeResult` | Renders questions/options, tracks answers, applies negative marking live, and computes the final result. |
 
-**Design principle running through the whole file:** every write (saving a project,
-logging a score) hits `localStorage` **first** for instant UI feedback, then syncs to
-Supabase in the background — see the [data flow](#10--data-flow-life-of-a-test-attempt)
-section for exactly how that plays out.
+> [!TIP]
+> **Design principle running through the whole file:** every write (saving a project,
+> logging a score) hits `localStorage` **first** for instant UI feedback, then syncs to
+> Supabase in the background — see the [data flow](#10--data-flow-life-of-a-test-attempt)
+> section for exactly how that plays out.
 
 ---
 
 ## 5 · Module: `css/styles.css` — the Liquid Glass design system
 
-A single ~1,100-line stylesheet, no CSS framework, built entirely on **CSS custom
+<img src="https://img.shields.io/badge/language-CSS3-1572B6?logo=css3&logoColor=white" /> <img src="https://img.shields.io/badge/size-~1100%20lines-5E5CE6" /> <img src="https://img.shields.io/badge/framework-none-20A83A" />
+
+A single stylesheet, no CSS framework, built entirely on **CSS custom
 properties** so the whole visual language is swappable from one `:root` block:
 
 ```css
@@ -154,22 +173,32 @@ properties** so the whole visual language is swappable from one `:root` block:
 --accent: #0A84FF;   --accent-2: #5E5CE6;   --accent-3: #FF375F;
 ```
 
+<div>
+<img src="https://img.shields.io/badge/%23-0A84FF" alt="accent" />
+<img src="https://img.shields.io/badge/%23-5E5CE6" alt="accent-2" />
+<img src="https://img.shields.io/badge/%23-FF375F" alt="accent-3" />
+<img src="https://img.shields.io/badge/%23-20A83A" alt="success" />
+<img src="https://img.shields.io/badge/%23-F15A24" alt="warning" />
+</div>
+
 - **Frosted "glass" cards** — translucent panels (`--glass-bg`, `backdrop-filter: blur`)
   floating over a cinematic wallpaper backdrop, echoing macOS/iOS Big Sur-era glassmorphism.
 - **Bento-style layout** — content grouped into rounded, shadowed blocks (`--r-xl`/`--r-lg`)
   rather than flat full-width sections.
 - **Spring motion** — every hover/transition uses the same `cubic-bezier` spring curve
   instead of linear/ease, so interactions feel physical rather than mechanical.
-- **Legacy tokens preserved on purpose** — original black/white variables (`--paper`,
-  `--ink`, `--rule`) are kept even though the new palette supersedes them, *specifically*
-  so no selector in `app.js`/`admin.js` breaks — the visual refactor never touched a
-  single class name.
+
+> [!NOTE]
+> **Legacy tokens preserved on purpose** — original black/white variables (`--paper`,
+> `--ink`, `--rule`) are kept even though the new palette supersedes them, *specifically*
+> so no selector in `app.js`/`admin.js` breaks — the visual refactor never touched a
+> single class name.
 
 ---
 
 ## 6 · Module: `admin.html` + `js/admin.js` — the admin console
 
-A deliberately **separate, tiny page** (22 lines of markup, ~40 lines of logic) rather
+A deliberately **separate, tiny page** rather
 than a hidden tab inside the main app — so a non-admin never even downloads admin code:
 
 - Checks the signed-in user's `profiles.role` on load; anything other than `'admin'`
@@ -185,6 +214,8 @@ than a hidden tab inside the main app — so a non-admin never even downloads ad
 
 ## 7 · Module: Supabase — schema, RLS & functions
 
+<img src="https://img.shields.io/badge/Database-Postgres-4169E1?logo=postgresql&logoColor=white" /> <img src="https://img.shields.io/badge/Security-Row%20Level%20Security-FF375F" />
+
 There is **no custom backend server**. GitHub Pages only ever serves static files —
 every permission check happens inside Postgres, enforced automatically the moment the
 browser calls Supabase.
@@ -193,10 +224,10 @@ browser calls Supabase.
 
 | Table | Purpose | Key columns |
 |---|---|---|
-| `profiles` | One row per user, auto-created by an `on_auth_user_created` trigger. | `id` (= `auth.users.id`), `username`, `role` (`user`/`admin`), `can_use_app` |
-| `quiz_projects` | Saved question sets. | `user_id`, `project_number`, `paper` (jsonb — the full question set + settings), `saved_at` |
-| `test_history` | One row per completed test attempt. | `user_id`, `title`, `marks`, `max_marks`, `percentage`, `passed`, `correct`, `wrong`, `unanswered`, `completed_at` |
-| `scoreboard_entries` *(view)* | What the homepage Score Board actually queries. | Joins `test_history` ⋈ `profiles`, filtered to `can_use_app = true` |
+| 🟦 `profiles` | One row per user, auto-created by an `on_auth_user_created` trigger. | `id` (= `auth.users.id`), `username`, `role` (`user`/`admin`), `can_use_app` |
+| 🟪 `quiz_projects` | Saved question sets. | `user_id`, `project_number`, `paper` (jsonb — the full question set + settings), `saved_at` |
+| 🟧 `test_history` | One row per completed test attempt. | `user_id`, `title`, `marks`, `max_marks`, `percentage`, `passed`, `correct`, `wrong`, `unanswered`, `completed_at` |
+| 🟩 `scoreboard_entries` *(view)* | What the homepage Score Board actually queries. | Joins `test_history` ⋈ `profiles`, filtered to `can_use_app = true` |
 
 ### Row Level Security, in plain terms
 
@@ -222,6 +253,8 @@ browser calls Supabase.
 
 ## 8 · Module: PWA layer — manifest, service worker, offline page
 
+<img src="https://img.shields.io/badge/PWA-installable-64D2FF?logo=pwa&logoColor=white" />
+
 Added without changing how the site behaves as a normal website — every piece is
 additive.
 
@@ -236,25 +269,30 @@ additive.
   // cache the response as a fallback, only serve cache/offline.html
   // when the network genuinely fails.
   ```
-  This matters because the site ships `no-cache` headers on `index.html` while under
-  active development — a cache-first worker would silently keep serving old, buggy
-  versions after every fix.
+
+> [!IMPORTANT]
+> This matters because the site ships `no-cache` headers on `index.html` while under
+> active development — a cache-first worker would silently keep serving old, buggy
+> versions after every fix.
+
 - **`offline.html`** — a minimal, friendly dead-end shown only with zero connectivity.
   The app is inherently online-only (everything is Supabase-backed), so this is not
   real offline functionality, just a softer failure state.
 
-**Install behaviour:** Android Chrome shows an automatic install prompt · iPhone
+**Install behaviour:** 🤖 Android Chrome shows an automatic install prompt · 🍎 iPhone
 Safari requires Share → *Add to Home Screen* (Apple disallows automatic prompts for
-third-party sites) · desktop Chrome/Edge shows an install icon in the address bar.
+third-party sites) · 🖥️ desktop Chrome/Edge shows an install icon in the address bar.
 
 ---
 
 ## 9 · Module: `js/no-inspect.js` — soft anti-cheat layer
 
 A small (36-line), intentionally lightweight script that discourages casual
-right-click / dev-tools snooping during a live test. It is **not** a security
-boundary — anyone determined can bypass it — it just raises the bar against casual
-peeking at answer keys mid-test.
+right-click / dev-tools snooping during a live test.
+
+> [!CAUTION]
+> This is **not** a security boundary — anyone determined can bypass it — it just
+> raises the bar against casual peeking at answer keys mid-test.
 
 ---
 
@@ -319,7 +357,8 @@ test_scores_setup.sql             Superseded/unused alternate scores schema — 
 SUPABASE_SETUP.md                 Original setup notes (auth config, first-admin SQL)
 ```
 
-> ⚠️ **Repo hygiene note:** the archive also contains a stale nested
+> [!WARNING]
+> The archive also contains a stale nested
 > `Prelimsify/Prelimsify/` folder — an older copy of `index.html`/`app.js` with no
 > admin link and old scoreboard code. GitHub Pages doesn't serve it as long as the
 > site's source is the repo root, but it's a trap for editing the wrong copy by
@@ -363,7 +402,7 @@ recognize if it reappears.
    `quiz_projects_delete_admin` RLS policies had never actually been created — an
    earlier patch script had been interrupted partway.
 
-**Fix:** removed the incorrect `user_id` filter (RLS decides access now, not the
+✅ **Fix:** removed the incorrect `user_id` filter (RLS decides access now, not the
 client) and created the missing admin policies.
 
 ### 13.2 · Completed test scores didn't save or show
@@ -372,7 +411,7 @@ client) and created the missing admin policies.
 that **did not exist** on the live Supabase project. Every insert silently failed
 inside a `try/catch` that only logged a console warning.
 
-**Fix:** created `test_history` with correct columns, indexes, and own-row RLS
+✅ **Fix:** created `test_history` with correct columns, indexes, and own-row RLS
 policies, and (re)created `scoreboard_entries` to read from it.
 
 ### 13.3 · Admin page showed "Access denied" for an actual admin
@@ -385,26 +424,24 @@ policy triggers infinite recursion — Postgres refuses the whole query with
 `infinite recursion detected in policy for relation "profiles"`. This surfaced as a
 Supabase error that the page originally masked behind a generic "Access denied."
 
-**Fix:** dropped the old recursive policies, and patched `admin.js` to surface the
+✅ **Fix:** dropped the old recursive policies, and patched `admin.js` to surface the
 actual Supabase error message instead of collapsing every failure into one generic
 message — which is what made the recursion error visible in the first place.
 
 ### 13.4 · Non-issue: a brand-new phone account had no saved projects/scores
 
-Not a bug. Saved projects and scores are tied to the specific `user_id` that created
-them — a new account on a phone is a different user by design and starts empty.
-Signing into the *same* account used on desktop restores everything via the sync
-described in §10.
+> [!NOTE]
+> Not a bug. Saved projects and scores are tied to the specific `user_id` that created
+> them — a new account on a phone is a different user by design and starts empty.
+> Signing into the *same* account used on desktop restores everything via the sync
+> described in §10.
 
 ---
 
 ## 14 · Known trade-offs
 
-- **No build tooling** — every fix is hand-edited directly into `js/app.js` /
-  `js/admin.js`. Fine at this size; worth revisiting if the app grows much larger.
-- **The service worker adds no real offline capability** — network-first means it
-  only buys installability plus a graceful "you're offline" screen, which is
-  intentional given how actively the backend/data changes.
-- **`admin.js` talks to `profiles`/`quiz_projects` directly under RLS** rather than
-  through the `admin_*` RPC functions in `admin_rls_patch.sql`. Both approaches are
-  valid — just don't assume the RPCs are already wired in if you go looking for them.
+| Trade-off | Why it's acceptable |
+|---|---|
+| ⚙️ **No build tooling** | Every fix is hand-edited directly into `js/app.js` / `js/admin.js`. Fine at this size; worth revisiting if the app grows much larger. |
+| 📴 **Service worker adds no real offline capability** | Network-first means it only buys installability plus a graceful "you're offline" screen, which is intentional given how actively the backend/data changes. |
+| 🔑 **`admin.js` talks to `profiles`/`quiz_projects` directly under RLS** | Rather than through the `admin_*` RPC functions in `admin_rls_patch.sql`. Both approaches are valid — just don't assume the RPCs are already wired in if you go looking for them. |
