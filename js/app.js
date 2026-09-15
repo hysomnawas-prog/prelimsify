@@ -449,6 +449,10 @@ function resetTest(){
 const root = document.getElementById('quizRoot');
 const savePaperBtn = document.getElementById('savePaperBtn');
 if (savePaperBtn) savePaperBtn.addEventListener('click', saveCurrentQuestionSet);
+// The loader panel is hidden while a test is running, so the same save action
+// is also available from the scorebar on the test page.
+const saveSetBtn = document.getElementById('saveSetBtn');
+if (saveSetBtn) saveSetBtn.addEventListener('click', saveCurrentQuestionSet);
 
 
 
@@ -474,17 +478,55 @@ function renderScoreHistory(rows, note=''){
     list.innerHTML='<div class="history-empty">No completed tests yet.</div>';
     return;
   }
+  const isAdmin = currentProfile?.role === 'admin';
   list.innerHTML=rows.map(r=>{
     const d=r.completed_at?new Date(r.completed_at).toLocaleString([], {day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}):'—';
     const pass=r.passed?'PASS':'FAIL';
+    // Administrators can override the stored pass/fail verdict of any entry.
+    const adminToggle = (isAdmin && r.id)
+      ? `<button type="button" class="history-verdict-btn ${r.passed?'to-fail':'to-pass'}" data-score-id="${escapeHistory(r.id)}" data-next-passed="${r.passed?'false':'true'}" title="Change this result">Mark ${r.passed?'FAIL':'PASS'}</button>`
+      : '';
     return `<div class="history-row">
       <div><div class="history-title">${escapeHistory(r.username||'User')} · ${escapeHistory(r.title||'Test')}</div><div class="history-date">${escapeHistory(d)}</div></div>
       <div class="history-score">${Number(r.marks||0).toFixed(2)}<span> / ${Number(r.max_marks||0).toFixed(2)}</span></div>
       <div class="history-percent">${Number(r.percentage||0).toFixed(1)}%</div>
       <div class="history-breakdown">✓ ${Number(r.correct||0)} &nbsp; ✕ ${Number(r.wrong||0)} &nbsp; — ${Number(r.unanswered||0)}</div>
-      <div class="history-result ${r.passed?'history-pass':'history-fail'}">${pass}</div>
+      <div class="history-result ${r.passed?'history-pass':'history-fail'}">${pass}${adminToggle}</div>
     </div>`;
   }).join('');
+
+  if (isAdmin){
+    list.querySelectorAll('.history-verdict-btn').forEach(btn => {
+      btn.addEventListener('click', () => setScorePassed(btn, btn.dataset.scoreId, btn.dataset.nextPassed === 'true'));
+    });
+  }
+}
+
+// Admin-only: overwrite the pass/fail verdict stored against a scoreboard entry.
+async function setScorePassed(btn, scoreId, passed){
+  const status = document.getElementById('scoreHistoryStatus');
+  if (currentProfile?.role !== 'admin') return;
+  if (!supabaseClient || !supabaseUser || !scoreId) return;
+  btn.disabled = true;
+  try{
+    const {data, error} = await supabaseClient
+      .from(TEST_HISTORY_TABLE)
+      .update({passed})
+      .eq('id', scoreId)
+      .select('id');
+    if (error) throw error;
+    if (!data || !data.length){
+      throw new Error('No row was updated. Run the admin scoreboard SQL patch so administrators may edit other users\' scores.');
+    }
+    await loadScoreHistory();
+    // loadScoreHistory() re-renders and resets the status line, so write after it.
+    const freshStatus = document.getElementById('scoreHistoryStatus');
+    if (freshStatus) freshStatus.textContent = `Result changed to ${passed ? 'PASS' : 'FAIL'}.`;
+  }catch(e){
+    console.warn('Could not change the pass/fail result:', e);
+    btn.disabled = false;
+    if (status) status.textContent = 'Could not change the result: ' + (e.message || e);
+  }
 }
 function escapeHistory(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 async function loadScoreHistory(){
@@ -822,14 +864,46 @@ function closeLoaderIfOpen(){
   if (body) body.classList.remove('open');
 }
 
+// While a question paper is loaded and the test is running, the loader panel
+// (paste JSON / .hysom / saved projects) must be completely hidden so that only
+// the test page is visible.
+function setLoaderPanelVisibility(show){
+  const panel = document.querySelector('.loader-panel');
+  if (panel) panel.style.display = show ? '' : 'none';
+  const body = document.getElementById('loaderBody');
+  if (body) body.classList.toggle('open', !!show);
+}
+
 function toggleLoader(){
   document.getElementById('loaderBody').classList.toggle('open');
 }
 
 function setLoaderMsg(text, ok){
   const el = document.getElementById('loaderMsg');
-  el.textContent = text;
-  el.className = 'loader-msg ' + (ok ? 'ok' : 'err');
+  if (el){
+    el.textContent = text;
+    el.className = 'loader-msg ' + (ok ? 'ok' : 'err');
+  }
+  // When the loader panel is hidden (a test is in progress) the message above
+  // is invisible, so mirror it as a short-lived toast instead.
+  const panel = document.querySelector('.loader-panel');
+  if (panel && panel.style.display === 'none') showAppToast(text, ok);
+}
+
+let appToastTimer = null;
+function showAppToast(text, ok){
+  if (!text) return;
+  let toast = document.getElementById('appToast');
+  if (!toast){
+    toast = document.createElement('div');
+    toast.id = 'appToast';
+    toast.className = 'app-toast';
+    document.body.appendChild(toast);
+  }
+  toast.textContent = text;
+  toast.className = 'app-toast show ' + (ok ? 'ok' : 'err');
+  if (appToastTimer) clearTimeout(appToastTimer);
+  appToastTimer = setTimeout(() => { toast.className = 'app-toast ' + (ok ? 'ok' : 'err'); }, 3200);
 }
 
 document.getElementById('fileInput').addEventListener('change', function(e){
@@ -1246,6 +1320,7 @@ function buildQuiz(restoreState = false){
   if (!Array.isArray(currentData) || !currentData.some(item => item.q) || !testStarted){
     // No active test: hide all test-only UI and leave only the question-set loader.
     setTestPaletteVisibility(false);
+    setLoaderPanelVisibility(true);
     const scorebar = document.querySelector('.scorebar');
     if (scorebar) scorebar.style.display = 'none';
     document.getElementById('totalCount').textContent = '0';
@@ -1261,6 +1336,8 @@ function buildQuiz(restoreState = false){
 
 
   setTestPaletteVisibility(true);
+  // A paper is loaded: show only the test page, never the loader panel.
+  setLoaderPanelVisibility(false);
   const scorebar = document.querySelector('.scorebar');
   if (scorebar) scorebar.style.display = 'flex';
   if (mastheadHomeBtn) mastheadHomeBtn.classList.remove('visible');
@@ -1394,13 +1471,7 @@ function buildQuiz(restoreState = false){
       renderQuestionPalette();
       saveTestSession();
     });
-    const clearBtn = document.createElement('button');
-    clearBtn.type = 'button';
-    clearBtn.className = 'question-control clear-response-btn';
-    clearBtn.textContent = 'Clear Response';
-    clearBtn.addEventListener('click', () => clearQuestionResponse(questionIndex));
     controls.appendChild(markBtn);
-    controls.appendChild(clearBtn);
 
     card.appendChild(optsWrap);
     card.appendChild(fb);
@@ -1450,29 +1521,6 @@ function renderQuestionPalette(){
     });
     grid.appendChild(b);
   });
-}
-
-function clearQuestionResponse(index){
-  const cards = [...document.querySelectorAll('.qcard')];
-  const card = cards[index];
-  if (!card || !selectedAnswers[index]) return;
-  const letter = selectedAnswers[index];
-  const item = currentData.filter(d => d.q)[index];
-  if (letter === item.a){ correctCount--; marks -= MARK_CORRECT; }
-  else { wrongCount--; marks -= MARK_WRONG; }
-  answered--;
-  delete selectedAnswers[index];
-  const opts = card.querySelectorAll('.opt');
-  opts.forEach(o => {
-    o.classList.remove('locked','dim','correct','wrong','selected');
-    delete o.dataset.picked;
-  });
-  const fb = card.querySelector('.feedback');
-  if (fb){ fb.textContent = ''; fb.className = 'feedback'; }
-  paletteCurrentIndex = index;
-  visitedQuestions.add(index);
-  updateScore();
-  saveTestSession();
 }
 
 function updateScore(){

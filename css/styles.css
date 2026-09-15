@@ -1134,3 +1134,17 @@
 }
 .auth-card .btn{width:100%;margin-top:8px}.auth-close{position:absolute;right:10px;top:10px;background:transparent}.auth-status{min-height:18px;margin-top:10px;font-size:11px}.auth-status.ok{color:#155a20}.auth-status.error{color:#8c1d17}.auth-switch{text-align:center;font-size:11px;margin-top:12px;color:var(--ink-soft)}.auth-switch button{border:0;background:none;text-decoration:underline;cursor:pointer;font:inherit;color:var(--ink)}
 @media(max-width:520px){.account-actions .btn{flex:1 1 45%}}
+
+/* Toast used for loader messages while the loader panel is hidden (test in progress). */
+.app-toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(14px);max-width:min(560px,92vw);padding:11px 18px;border-radius:999px;background:rgba(20,20,20,.92);color:#fff;font:600 12.5px/1.4 var(--sans);text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.28);z-index:1000001;opacity:0;pointer-events:none;transition:opacity .22s ease,transform .22s ease}
+.app-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.app-toast.err{background:rgba(124,22,18,.94)}
+.app-toast.ok{background:rgba(18,72,32,.94)}
+
+/* Admin-only pass/fail override control on the shared scoreboard. */
+.history-verdict-btn{display:block;width:100%;margin-top:6px;padding:4px 8px;border:1px solid var(--glass-border-strong,#bbb);border-radius:var(--r-pill,999px);background:rgba(255,255,255,.7);font:800 9px var(--sans);letter-spacing:.04em;cursor:pointer;color:#333;transition:transform .15s ease,background .15s ease}
+.history-verdict-btn:hover{transform:scale(1.04);background:#fff}
+.history-verdict-btn:disabled{opacity:.5;cursor:default;transform:none}
+.history-verdict-btn.to-pass{color:#155a20}
+.history-verdict-btn.to-fail{color:#8c1d17}
+.history-result:has(.history-verdict-btn){border-radius:10px;padding:6px 8px;min-width:78px}
