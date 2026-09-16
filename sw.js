@@ -4,7 +4,7 @@
 // old, buggy version of index.html/app.js/admin.js to be served over a newer
 // deployed one. Bump CACHE_VERSION whenever you want to force clients to
 // drop old cached files.
-const CACHE_VERSION = 'prelimsify-v2';
+const CACHE_VERSION = 'prelimsify-v3';
 const OFFLINE_URL = 'offline.html';
 
 const PRECACHE = [

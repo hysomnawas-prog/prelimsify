@@ -28,6 +28,19 @@ const DEFAULT_TOPICS = [
   { key: "current_affairs", label: "Current Affairs" }
 ];
 let topicLabels = {}; // topic key -> admin-renamed label (overrides the default above)
+// Set true the moment we detect the `topic` column or `topic_labels` table
+// is missing (i.e. mocktests_topics_patch.sql hasn't been run yet). Shown
+// to the admin as a persistent banner so "categorization isn't saving"
+// stops being a silent mystery.
+let topicsSchemaMissing = false;
+function friendlySchemaError(e){
+  const msg = String(e?.message || e || '');
+  if (/column .*topic.* does not exist/i.test(msg) || /relation .*topic_labels.* does not exist/i.test(msg)){
+    topicsSchemaMissing = true;
+    return 'Run mocktests_topics_patch.sql in the Supabase SQL Editor, then try again.';
+  }
+  return msg;
+}
 let supabaseClient = null;
 let supabaseUser = null;
 let currentProfile = null;
@@ -621,6 +634,7 @@ async function loadSavedProjects(){
       // the `topic` column doesn't exist. Fall back to selecting without it
       // rather than failing outright — the projects still show up
       // (as Uncategorized) instead of the panel looking empty.
+      topicsSchemaMissing = true;
       console.warn('quiz_projects.topic column not found — run mocktests_topics_patch.sql. Falling back without topics for now.');
       ({ data, error } = await supabaseClient
         .from(SAVED_PROJECTS_TABLE)
@@ -843,7 +857,12 @@ async function setProjectTopic(row, topicKey){
     renderSavedProjects();
   }catch(e){
     console.warn('Topic could not sync to Supabase:', e);
-    setLoaderMsg('Moved here, but could not sync the topic change: ' + (e.message || e), false);
+    const raw = String(e?.message || e || '');
+    let note = friendlySchemaError(e);
+    if (note === raw && /no rows returned|0 rows/i.test(raw)){
+      note = 'The update did not apply — run saved_projects_admin_patch.sql (admin permissions) in Supabase, then try again.';
+    }
+    setLoaderMsg('Moved here, but could not sync the topic change: ' + note, false);
   }
 }
 
@@ -865,6 +884,7 @@ async function loadTopicLabels(){
       if (error) throw error;
       (data || []).forEach(row => { if (row.key) topicLabels[row.key] = row.label; });
     }catch(e){
+      if (/relation .*topic_labels.* does not exist/i.test(e?.message || '')) topicsSchemaMissing = true;
       console.warn('Topic labels could not be loaded, using defaults:', e);
     }
   }
@@ -890,7 +910,7 @@ async function renameTopic(key){
     if (error) throw error;
   }catch(e){
     console.warn('Topic rename could not sync to Supabase:', e);
-    setLoaderMsg('Renamed here, but could not sync: ' + (e.message || e), false);
+    setLoaderMsg('Renamed here, but could not sync: ' + friendlySchemaError(e), false);
   }
 }
 
@@ -899,16 +919,19 @@ function renderSavedProjects(){
   const count = document.getElementById('savedCount');
   if (!topicsWrap || !count) return;
 
+  const isAdmin = currentProfile?.role === 'admin';
+  const myId = supabaseUser?.id;
+  const schemaWarningHtml = (isAdmin && topicsSchemaMissing)
+    ? '<div class="loader-msg err">Topic categorization can\'t be saved yet — run mocktests_topics_patch.sql in the Supabase SQL Editor.</div>'
+    : '';
+
   const rows = [...savedProjects].sort((a,b) => a.project_number - b.project_number);
   count.textContent = rows.length + (rows.length === 1 ? ' saved' : ' saved');
 
   if (!rows.length){
-    topicsWrap.innerHTML = '<div class="saved-empty">No mocktests yet.</div>';
+    topicsWrap.innerHTML = schemaWarningHtml + '<div class="saved-empty">No mocktests yet.</div>';
     return;
   }
-
-  const isAdmin = currentProfile?.role === 'admin';
-  const myId = supabaseUser?.id;
 
   // Group rows under their topic bucket, in the fixed subject order, with
   // Uncategorized last. A topic with no mocktests in it is only shown to an
@@ -920,7 +943,7 @@ function renderSavedProjects(){
     grouped[key].push(row);
   });
 
-  topicsWrap.innerHTML = '';
+  topicsWrap.innerHTML = schemaWarningHtml;
   DEFAULT_TOPICS.forEach(topic => {
     const items = grouped[topic.key];
     if (!items.length && !isAdmin) return;
