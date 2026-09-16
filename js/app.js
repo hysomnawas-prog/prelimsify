@@ -1260,7 +1260,9 @@ function requireSignedIn(){
   openAuthModal('login');
   return false;
 }
+let lastProfileLoadError = null; // real reason the last loadCurrentProfile() call failed, if any
 async function loadCurrentProfile(){
+  lastProfileLoadError = null;
   if(!supabaseClient||!supabaseUser)return false;
 
   // Read/repair the profile through a SECURITY DEFINER RPC. This avoids
@@ -1268,13 +1270,15 @@ async function loadCurrentProfile(){
   const {data,error}=await supabaseClient.rpc('ensure_my_profile');
   if(error){
     console.error('Profile RPC failed:',error);
-    setAuthStatus('Login worked, but the account profile could not be loaded: ' + (error.message || error), false);
+    lastProfileLoadError = error.message || String(error);
+    setAuthStatus('Login worked, but the account profile could not be loaded: ' + lastProfileLoadError, false);
     return false;
   }
 
   const profile=Array.isArray(data) ? data[0] : data;
   if(!profile){
     console.error('ensure_my_profile returned no profile');
+    lastProfileLoadError = 'ensure_my_profile returned no profile row.';
     return false;
   }
 
@@ -1300,7 +1304,7 @@ async function signInWithUsername(username,password){
     throw error;
   }
   supabaseUser=data.user;
-  if(!(await loadCurrentProfile())) throw new Error('Login succeeded, but the account profile could not be loaded. Run the latest Supabase SQL setup and try again.');
+  if(!(await loadCurrentProfile())) throw new Error('Login succeeded, but the account profile could not be loaded' + (lastProfileLoadError ? ': ' + lastProfileLoadError : '. Run the latest Supabase SQL setup and try again.'));
   closeAuthModal();
   updateAuthUI();
   await loadTopicLabels();
@@ -1324,7 +1328,7 @@ async function createUsernameAccount(username,password){
     throw new Error('Account created, but email confirmation is enabled. Turn OFF Authentication → Providers → Email → Confirm email, then log in.');
   }
   supabaseUser=data.user;
-  if(!(await loadCurrentProfile())) throw new Error('Account created, but its profile could not be loaded. Run the latest Supabase SQL setup and try again.');
+  if(!(await loadCurrentProfile())) throw new Error('Account created, but its profile could not be loaded' + (lastProfileLoadError ? ': ' + lastProfileLoadError : '. Run the latest Supabase SQL setup and try again.'));
   closeAuthModal();
   updateAuthUI();
   await loadTopicLabels();
