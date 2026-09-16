@@ -514,6 +514,51 @@
   .saved-delete{color:var(--red-line);}
   .saved-delete:hover{background:rgba(255,59,48,.1); transform:scale(1.05);}
 
+  /* ---- Mocktests panel (shared library, visible to every signed-in user) ---- */
+  .mocktests-panel{
+    max-width:none;
+    margin:0 0 6px;
+    background:var(--glass-bg);
+    -webkit-backdrop-filter:var(--glass-blur);
+    backdrop-filter:var(--glass-blur);
+    border:1px solid var(--glass-border);
+    border-radius:var(--r-lg);
+    padding:16px 22px;
+  }
+  .mocktests-topic{margin-bottom:16px;}
+  .mocktests-topic:last-child{margin-bottom:0;}
+  .mocktests-topic-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    margin-bottom:8px;
+    padding-bottom:6px;
+    border-bottom:1px solid var(--rule-light);
+  }
+  .mocktests-topic-head-left{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;}
+  .mocktests-topic-title{font-family:var(--serif);font-weight:700;font-size:12.5px;}
+  .mocktests-topic-count{font-family:var(--mono);font-size:10px;color:var(--muted);}
+  .topic-rename-btn{
+    border:none;
+    background:none;
+    color:var(--ink-soft);
+    font-family:var(--sans);
+    font-size:10px;
+    text-decoration:underline;
+    cursor:pointer;
+    padding:0;
+  }
+  .topic-select{
+    font-family:var(--sans);
+    font-size:10px;
+    border:1px solid var(--glass-border-strong);
+    border-radius:var(--r-sm);
+    background:rgba(255,255,255,.6);
+    padding:5px 6px;
+    cursor:pointer;
+  }
+
   /* ---- Scorebar: the floating Apple "dock" toolbar ---- */
   .scorebar{
     position:sticky;
@@ -896,6 +941,7 @@
   html:fullscreen .scorebar,
   html:fullscreen .progress-track,
   html:fullscreen .loader-panel,
+  html:fullscreen .mocktests-panel,
   html:fullscreen .container,
   html:fullscreen .submit-bar,
   html:fullscreen .footer-note {
@@ -910,6 +956,7 @@
     padding-right:clamp(24px,4vw,64px) !important;
   }
   html:fullscreen .loader-panel,
+  html:fullscreen .mocktests-panel,
   html:fullscreen .submit-bar,
   html:fullscreen .masthead {
     padding-left:clamp(24px,4vw,64px) !important;

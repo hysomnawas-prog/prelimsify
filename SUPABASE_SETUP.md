@@ -13,5 +13,6 @@ WHERE lower(username)='hysomnawas';
 ```
 
 6. GitHub Pages must contain the files from this ZIP. Database SQL alone cannot update the website UI/JavaScript.
+7. Run `admin_rls_patch.sql`, `saved_projects_admin_patch.sql`, `admin_scoreboard_patch.sql`, and `mocktests_topics_patch.sql` (in that order) to enable admin management, shared Mocktests, and the seven topic headings.
 
 Passwords are handled by Supabase Auth and are never stored/displayed as plaintext in `profiles`.

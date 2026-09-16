@@ -9,8 +9,25 @@ const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_E2ghL9KbeoQ-GghejXbrQw_ie0wrjH_
 
 const SAVED_PROJECTS_TABLE = "quiz_projects";
 const TEST_HISTORY_TABLE = "test_history";
+const TOPIC_LABELS_TABLE = "topic_labels";
 const LOCAL_HISTORY_KEY = "prelimsify_score_history";
 const LOCAL_SAVED_PROJECTS_KEY = "prelimsify_saved_projects";
+const UNCATEGORIZED_TOPIC = "uncategorized";
+// The seven fixed subject headings Mocktests are organised under, plus a
+// catch-all bucket for anything an admin hasn't sorted yet. Keys are stable
+// identifiers stored on each project; the display label can be renamed by
+// an admin (see topicLabels / loadTopicLabels / renameTopic).
+const DEFAULT_TOPICS = [
+  { key: "history_culture", label: "History & Culture" },
+  { key: "geography", label: "Geography" },
+  { key: "polity_governance", label: "Polity & Governance" },
+  { key: "economy", label: "Economy" },
+  { key: "environment", label: "Environment" },
+  { key: "science_tech", label: "Science & Technology" },
+  { key: "current_affairs", label: "Current Affairs" },
+  { key: UNCATEGORIZED_TOPIC, label: "Uncategorized" }
+];
+let topicLabels = {}; // topic key -> admin-renamed label (overrides the default above)
 let supabaseClient = null;
 let supabaseUser = null;
 let currentProfile = null;
@@ -590,19 +607,14 @@ async function loadSavedProjects(){
   if (!supabaseClient || !supabaseUser) return;
 
   try{
-    // Admins can see all saved question sets. This also restores sets that
-    // were saved under an older/orphaned account while keeping normal users
-    // restricted to their own projects.
-    let query = supabaseClient
+    // Mocktests are a shared library: every signed-in user sees every saved
+    // question set (grouped by topic), not just their own. Who may rename,
+    // re-topic, or delete a given row is still controlled separately (RLS
+    // + the admin/owner check in renderSavedProjects).
+    const { data, error } = await supabaseClient
       .from(SAVED_PROJECTS_TABLE)
-      .select('id,user_id,project_number,paper,saved_at')
+      .select('id,user_id,project_number,paper,topic,saved_at')
       .order('project_number', { ascending:true });
-
-    if (currentProfile?.role !== 'admin') {
-      query = query.eq('user_id', supabaseUser.id);
-    }
-
-    const { data, error } = await query;
 
     if (error) throw error;
 
@@ -706,9 +718,10 @@ async function saveCurrentQuestionSet(){
         user_id: supabaseUser.id,
         project_number: nextProject,
         paper: projectPaper,
+        topic: null,
         saved_at: localRow.saved_at
       })
-      .select('id,user_id,project_number,paper,saved_at')
+      .select('id,user_id,project_number,paper,topic,saved_at')
       .single();
 
     if (error) throw error;
@@ -775,7 +788,7 @@ async function renameSavedProject(row){
       .from(SAVED_PROJECTS_TABLE)
       .update({ paper: row.paper })
       .eq('id', row.id)
-      .select('id,user_id,project_number,paper,saved_at')
+      .select('id,user_id,project_number,paper,topic,saved_at')
       .single();
 
     if (error) throw error;
@@ -789,73 +802,232 @@ async function renameSavedProject(row){
   }
 }
 
+// Admin-only: move a saved question set into one of the fixed topic buckets
+// (or back to Uncategorized). Every signed-in user sees the result since
+// Mocktests are shared, but only an admin can reassign the topic.
+async function setProjectTopic(row, topicKey){
+  if (currentProfile?.role !== 'admin') return;
+  const cleanKey = (topicKey && topicKey !== UNCATEGORIZED_TOPIC) ? topicKey : null;
+  row.topic = cleanKey;
+  setLocalSavedProjects(savedProjects);
+  renderSavedProjects();
+
+  if (!row.id || !supabaseClient || !supabaseUser) return;
+
+  try{
+    const { data, error } = await supabaseClient
+      .from(SAVED_PROJECTS_TABLE)
+      .update({ topic: cleanKey })
+      .eq('id', row.id)
+      .select('id,user_id,project_number,paper,topic,saved_at')
+      .single();
+
+    if (error) throw error;
+
+    const index = savedProjects.findIndex(p => p === row || p.id === row.id);
+    if (index !== -1) savedProjects[index] = data;
+    setLocalSavedProjects(savedProjects);
+    renderSavedProjects();
+  }catch(e){
+    console.warn('Topic could not sync to Supabase:', e);
+    setLoaderMsg('Moved here, but could not sync the topic change: ' + (e.message || e), false);
+  }
+}
+
+function getTopicLabel(key){
+  const normalized = key || UNCATEGORIZED_TOPIC;
+  if (topicLabels[normalized]) return topicLabels[normalized];
+  const found = DEFAULT_TOPICS.find(t => t.key === normalized);
+  return found ? found.label : 'Uncategorized';
+}
+
+// Loads any admin-renamed topic headings so every user sees the current
+// labels. Falls back silently to the defaults if the table/patch isn't
+// present yet.
+async function loadTopicLabels(){
+  topicLabels = {};
+  if (supabaseClient && supabaseUser){
+    try{
+      const { data, error } = await supabaseClient.from(TOPIC_LABELS_TABLE).select('key,label');
+      if (error) throw error;
+      (data || []).forEach(row => { if (row.key) topicLabels[row.key] = row.label; });
+    }catch(e){
+      console.warn('Topic labels could not be loaded, using defaults:', e);
+    }
+  }
+  renderSavedProjects();
+}
+
+// Admin-only: rename one of the topic headings. The new label is shown to
+// every user immediately and synced to Supabase so it persists.
+async function renameTopic(key){
+  if (currentProfile?.role !== 'admin') return;
+  const current = getTopicLabel(key);
+  const next = window.prompt('Rename this topic heading:', current);
+  if (next === null) return;
+  const clean = next.trim();
+  if (!clean || clean === current) return;
+
+  topicLabels[key] = clean;
+  renderSavedProjects();
+
+  if (!supabaseClient || !supabaseUser) return;
+  try{
+    const { error } = await supabaseClient.from(TOPIC_LABELS_TABLE).upsert({ key, label: clean });
+    if (error) throw error;
+  }catch(e){
+    console.warn('Topic rename could not sync to Supabase:', e);
+    setLoaderMsg('Renamed here, but could not sync: ' + (e.message || e), false);
+  }
+}
+
 function renderSavedProjects(){
-  const list = document.getElementById('savedList');
+  const topicsWrap = document.getElementById('mocktestsTopics');
   const count = document.getElementById('savedCount');
-  if (!list || !count) return;
+  if (!topicsWrap || !count) return;
 
   const rows = [...savedProjects].sort((a,b) => a.project_number - b.project_number);
   count.textContent = rows.length + (rows.length === 1 ? ' saved' : ' saved');
 
   if (!rows.length){
-    list.innerHTML = '<div class="saved-empty">No saved question sets yet.</div>';
+    topicsWrap.innerHTML = '<div class="saved-empty">No mocktests yet.</div>';
     return;
   }
 
-  list.innerHTML = '';
+  const isAdmin = currentProfile?.role === 'admin';
+  const myId = supabaseUser?.id;
+
+  // Group rows under their topic bucket, in the fixed subject order, with
+  // Uncategorized last. A topic with no mocktests in it is only shown to an
+  // admin (so normal users don't see a wall of empty headings).
+  const grouped = {};
+  DEFAULT_TOPICS.forEach(t => { grouped[t.key] = []; });
   rows.forEach(row => {
-    const wrap = document.createElement('div');
-    wrap.className = 'saved-item';
+    const key = (row.topic && grouped[row.topic]) ? row.topic : UNCATEGORIZED_TOPIC;
+    grouped[key].push(row);
+  });
 
-    const name = document.createElement('div');
-    name.className = 'saved-question';
-    const title = row.paper?.title || `Project ${row.project_number}`;
-    name.textContent = `Project ${row.project_number} — ${title}`;
-    name.title = 'Load this question set';
-    name.onclick = () => {
-      try{
-        applyProjectPaper(row.paper);
-        testStarted = true;
-        testPaused = false;
-        submitted = false;
-        timeUp = false;
-        paletteCurrentIndex = 0;
-        visitedQuestions = new Set([0]);
-        markedQuestions = new Set();
-        selectedAnswers = {};
-        clearTestSession();
-        setTestPaletteVisibility(true);
-        document.getElementById('homeScreen').style.display = 'none';
-        document.getElementById('appShell').classList.add('active');
-        buildQuiz(false);
-        closeLoaderIfOpen();
-        window.scrollTo({top:0, behavior:'smooth'});
-        setLoaderMsg(`Loaded Project ${row.project_number}.`, true);
-      }catch(e){
-        setLoaderMsg(`Could not load Project ${row.project_number}: ${e.message || e}`, false);
+  topicsWrap.innerHTML = '';
+  DEFAULT_TOPICS.forEach(topic => {
+    const items = grouped[topic.key];
+    if (!items.length && !isAdmin) return;
+
+    const section = document.createElement('div');
+    section.className = 'mocktests-topic';
+
+    const head = document.createElement('div');
+    head.className = 'mocktests-topic-head';
+
+    const headLeft = document.createElement('div');
+    headLeft.className = 'mocktests-topic-head-left';
+    const title = document.createElement('span');
+    title.className = 'mocktests-topic-title';
+    title.textContent = getTopicLabel(topic.key);
+    headLeft.appendChild(title);
+    if (isAdmin){
+      const renameBtn = document.createElement('button');
+      renameBtn.type = 'button';
+      renameBtn.className = 'topic-rename-btn';
+      renameBtn.textContent = 'Rename';
+      renameBtn.onclick = () => renameTopic(topic.key);
+      headLeft.appendChild(renameBtn);
+    }
+    head.appendChild(headLeft);
+
+    const countEl = document.createElement('span');
+    countEl.className = 'mocktests-topic-count';
+    countEl.textContent = items.length + (items.length === 1 ? ' test' : ' tests');
+    head.appendChild(countEl);
+
+    section.appendChild(head);
+
+    const list = document.createElement('div');
+    list.className = 'saved-list';
+
+    if (!items.length){
+      const empty = document.createElement('div');
+      empty.className = 'saved-empty';
+      empty.textContent = 'Nothing in this topic yet.';
+      list.appendChild(empty);
+    }
+
+    items.forEach(row => {
+      const canManage = isAdmin || (myId && row.user_id === myId);
+
+      const wrap = document.createElement('div');
+      wrap.className = 'saved-item';
+
+      const name = document.createElement('div');
+      name.className = 'saved-question';
+      const rowTitle = row.paper?.title || `Project ${row.project_number}`;
+      name.textContent = `Project ${row.project_number} — ${rowTitle}`;
+      name.title = 'Attempt this mocktest';
+      name.onclick = () => {
+        try{
+          applyProjectPaper(row.paper);
+          testStarted = true;
+          testPaused = false;
+          submitted = false;
+          timeUp = false;
+          paletteCurrentIndex = 0;
+          visitedQuestions = new Set([0]);
+          markedQuestions = new Set();
+          selectedAnswers = {};
+          clearTestSession();
+          setTestPaletteVisibility(true);
+          document.getElementById('homeScreen').style.display = 'none';
+          document.getElementById('appShell').classList.add('active');
+          buildQuiz(false);
+          closeLoaderIfOpen();
+          window.scrollTo({top:0, behavior:'smooth'});
+          setLoaderMsg(`Loaded Project ${row.project_number}.`, true);
+        }catch(e){
+          setLoaderMsg(`Could not load Project ${row.project_number}: ${e.message || e}`, false);
+        }
+      };
+      wrap.appendChild(name);
+
+      const actions = document.createElement('div');
+      actions.className = 'saved-actions';
+
+      if (isAdmin){
+        const select = document.createElement('select');
+        select.className = 'topic-select';
+        select.title = 'Move to a different topic';
+        DEFAULT_TOPICS.forEach(t => {
+          const opt = document.createElement('option');
+          opt.value = t.key;
+          opt.textContent = getTopicLabel(t.key);
+          if ((row.topic || UNCATEGORIZED_TOPIC) === t.key) opt.selected = true;
+          select.appendChild(opt);
+        });
+        select.onclick = e => e.stopPropagation();
+        select.onchange = () => setProjectTopic(row, select.value);
+        actions.appendChild(select);
       }
-    };
 
-    const actions = document.createElement('div');
-    actions.className = 'saved-actions';
+      if (canManage){
+        const rename = document.createElement('button');
+        rename.className = 'saved-rename';
+        rename.type = 'button';
+        rename.textContent = 'Rename';
+        rename.onclick = () => renameSavedProject(row);
+        actions.appendChild(rename);
 
-    const rename = document.createElement('button');
-    rename.className = 'saved-rename';
-    rename.type = 'button';
-    rename.textContent = 'Rename';
-    rename.onclick = () => renameSavedProject(row);
+        const del = document.createElement('button');
+        del.className = 'saved-delete';
+        del.type = 'button';
+        del.textContent = 'Delete';
+        del.onclick = () => deleteSavedProject(row);
+        actions.appendChild(del);
+      }
 
-    const del = document.createElement('button');
-    del.className = 'saved-delete';
-    del.type = 'button';
-    del.textContent = 'Delete';
-    del.onclick = () => deleteSavedProject(row);
+      if (actions.childNodes.length) wrap.appendChild(actions);
+      list.appendChild(wrap);
+    });
 
-    actions.appendChild(rename);
-    actions.appendChild(del);
-    wrap.appendChild(name);
-    wrap.appendChild(actions);
-    list.appendChild(wrap);
+    section.appendChild(list);
+    topicsWrap.appendChild(section);
   });
 }
 
@@ -864,14 +1036,23 @@ function closeLoaderIfOpen(){
   if (body) body.classList.remove('open');
 }
 
-// While a question paper is loaded and the test is running, the loader panel
-// (paste JSON / .hysom / saved projects) must be completely hidden so that only
-// the test page is visible.
+// The loader panel (paste JSON / .hysom / file upload / marks & time
+// settings) is an admin-only tool for building out the shared Mocktests
+// library — normal users never see it, only the Mocktests list itself.
 function setLoaderPanelVisibility(show){
   const panel = document.querySelector('.loader-panel');
-  if (panel) panel.style.display = show ? '' : 'none';
+  const isAdmin = currentProfile?.role === 'admin';
+  const actuallyShow = !!show && isAdmin;
+  if (panel) panel.style.display = actuallyShow ? '' : 'none';
   const body = document.getElementById('loaderBody');
-  if (body) body.classList.toggle('open', !!show);
+  if (body) body.classList.toggle('open', actuallyShow);
+}
+
+// Mocktests are visible to every signed-in user, admin or not, whenever
+// there's no test currently running.
+function setMocktestsPanelVisibility(show){
+  const panel = document.getElementById('mocktestsPanel');
+  if (panel) panel.style.display = show ? '' : 'none';
 }
 
 function toggleLoader(){
@@ -1086,6 +1267,7 @@ async function signInWithUsername(username,password){
   if(!(await loadCurrentProfile())) throw new Error('Login succeeded, but the account profile could not be loaded. Run the latest Supabase SQL setup and try again.');
   closeAuthModal();
   updateAuthUI();
+  await loadTopicLabels();
   await loadSavedProjects();
   await loadScoreHistory();
   return true;
@@ -1109,6 +1291,7 @@ async function createUsernameAccount(username,password){
   if(!(await loadCurrentProfile())) throw new Error('Account created, but its profile could not be loaded. Run the latest Supabase SQL setup and try again.');
   closeAuthModal();
   updateAuthUI();
+  await loadTopicLabels();
   await loadSavedProjects();
   await loadScoreHistory();
   return true;
@@ -1318,9 +1501,11 @@ function buildQuiz(restoreState = false){
   updatePauseUI();
 
   if (!Array.isArray(currentData) || !currentData.some(item => item.q) || !testStarted){
-    // No active test: hide all test-only UI and leave only the question-set loader.
+    // No active test: hide all test-only UI. The loader (admin-only) and
+    // the Mocktests library (everyone) both live on this "home" state.
     setTestPaletteVisibility(false);
     setLoaderPanelVisibility(true);
+    setMocktestsPanelVisibility(true);
     const scorebar = document.querySelector('.scorebar');
     if (scorebar) scorebar.style.display = 'none';
     document.getElementById('totalCount').textContent = '0';
@@ -1336,8 +1521,9 @@ function buildQuiz(restoreState = false){
 
 
   setTestPaletteVisibility(true);
-  // A paper is loaded: show only the test page, never the loader panel.
+  // A paper is loaded: show only the test page, never the loader or Mocktests panels.
   setLoaderPanelVisibility(false);
+  setMocktestsPanelVisibility(false);
   const scorebar = document.querySelector('.scorebar');
   if (scorebar) scorebar.style.display = 'flex';
   if (mastheadHomeBtn) mastheadHomeBtn.classList.remove('visible');
@@ -1704,11 +1890,12 @@ setupAuthUI();
     supabaseClient.auth.onAuthStateChange(async (_event, session) => {
       supabaseUser = session?.user || null;
       if (supabaseUser) {
-        if (await loadCurrentProfile()) { await loadSavedProjects(); await loadScoreHistory(); }
+        if (await loadCurrentProfile()) { await loadTopicLabels(); await loadSavedProjects(); await loadScoreHistory(); }
       } else { currentProfile=null; updateAuthUI(); }
     });
   }
   await loadScoreHistory();
+  await loadTopicLabels();
   await loadSavedProjects();
   if (!restoreTestSession()) {
     currentData = [];
