@@ -611,10 +611,23 @@ async function loadSavedProjects(){
     // question set (grouped by topic), not just their own. Who may rename,
     // re-topic, or delete a given row is still controlled separately (RLS
     // + the admin/owner check in renderSavedProjects).
-    const { data, error } = await supabaseClient
+    let { data, error } = await supabaseClient
       .from(SAVED_PROJECTS_TABLE)
       .select('id,user_id,project_number,paper,topic,saved_at')
       .order('project_number', { ascending:true });
+
+    if (error && /column .*topic.* does not exist/i.test(error.message || '')){
+      // mocktests_topics_patch.sql hasn't been run on this database yet, so
+      // the `topic` column doesn't exist. Fall back to selecting without it
+      // rather than failing outright — the projects still show up
+      // (as Uncategorized) instead of the panel looking empty.
+      console.warn('quiz_projects.topic column not found — run mocktests_topics_patch.sql. Falling back without topics for now.');
+      ({ data, error } = await supabaseClient
+        .from(SAVED_PROJECTS_TABLE)
+        .select('id,user_id,project_number,paper,saved_at')
+        .order('project_number', { ascending:true }));
+      if (data) data = data.map(row => ({ ...row, topic: null }));
+    }
 
     if (error) throw error;
 
