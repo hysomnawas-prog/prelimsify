@@ -638,7 +638,7 @@ async function loadSavedProjects(){
       console.warn('quiz_projects.topic column not found — run mocktests_topics_patch.sql. Falling back without topics for now.');
       ({ data, error } = await supabaseClient
         .from(SAVED_PROJECTS_TABLE)
-        .select('id,user_id,project_number,paper,saved_at')
+        .select('id,user_id,project_number,paper,topic,saved_at')
         .order('project_number', { ascending:true }));
       if (data) data = data.map(row => ({ ...row, topic: null }));
     }
