@@ -638,14 +638,35 @@ async function loadSavedProjects(){
       console.warn('quiz_projects.topic column not found — run mocktests_topics_patch.sql. Falling back without topics for now.');
       ({ data, error } = await supabaseClient
         .from(SAVED_PROJECTS_TABLE)
-        .select('id,user_id,project_number,paper,topic,saved_at')
+        .select('id,user_id,project_number,paper,saved_at')
         .order('project_number', { ascending:true }));
       if (data) data = data.map(row => ({ ...row, topic: null }));
     }
 
     if (error) throw error;
 
-    const synced = data || [];
+    const synced = (data || []).map(row => ({
+      ...row,
+      // The category is stored in BOTH the topic column and inside paper.topic.
+      // This makes the category survive refreshes even if an older database
+      // schema/query drops the topic column.
+      topic: row.topic || row.paper?.topic || null
+    }));
+
+    // If an older/local copy already knows a category but Supabase doesn't,
+    // keep the local category and automatically write it back to Supabase.
+    const localById = new Map(local.filter(r => r.id).map(r => [r.id, r]));
+    const repaired = [];
+    synced.forEach(row => {
+      const localRow = localById.get(row.id);
+      const recoveredTopic = row.topic || localRow?.topic || localRow?.paper?.topic || null;
+      if (recoveredTopic && recoveredTopic !== row.topic) {
+        row.topic = recoveredTopic;
+        row.paper = { ...(row.paper || {}), topic: recoveredTopic };
+        repaired.push(row);
+      }
+    });
+
     // Keep any project saved on this device that never made it to Supabase
     // (e.g. saved while offline or while the connection was blocked).
     const localOnly = local.filter(r => !r.id);
@@ -654,6 +675,18 @@ async function loadSavedProjects(){
     savedProjects = merged;
     setLocalSavedProjects(merged);
     renderSavedProjects();
+
+    // Automatically repair missing server categories in the background.
+    for (const row of repaired) {
+      try {
+        await supabaseClient
+          .from(SAVED_PROJECTS_TABLE)
+          .update({ topic: row.topic, paper: row.paper })
+          .eq('id', row.id);
+      } catch (e) {
+        console.warn('Could not auto-repair project topic:', e);
+      }
+    }
   }catch(e){
     console.warn('Saved projects could not be synced from Supabase, showing local copy:', e);
   }
@@ -727,7 +760,8 @@ async function saveCurrentQuestionSet(){
     id: null,
     local_id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
     project_number: nextProject,
-    paper: projectPaper,
+    paper: { ...projectPaper, topic: null },
+    topic: null,
     saved_at: new Date().toISOString()
   };
   savedProjects.push(localRow);
@@ -744,7 +778,7 @@ async function saveCurrentQuestionSet(){
       .insert({
         user_id: supabaseUser.id,
         project_number: nextProject,
-        paper: projectPaper,
+        paper: { ...projectPaper, topic: null },
         topic: null,
         saved_at: localRow.saved_at
       })
@@ -835,7 +869,11 @@ async function renameSavedProject(row){
 async function setProjectTopic(row, topicKey){
   if (currentProfile?.role !== 'admin') return;
   const cleanKey = (topicKey && topicKey !== UNCATEGORIZED_TOPIC) ? topicKey : null;
+
+  // Store the category redundantly in the row AND inside the paper JSON.
+  // The JSON copy is the durable fallback for old schemas/caches.
   row.topic = cleanKey;
+  row.paper = { ...(row.paper || {}), topic: cleanKey };
   setLocalSavedProjects(savedProjects);
   renderSavedProjects();
 
@@ -844,7 +882,7 @@ async function setProjectTopic(row, topicKey){
   try{
     const { data, error } = await supabaseClient
       .from(SAVED_PROJECTS_TABLE)
-      .update({ topic: cleanKey })
+      .update({ topic: cleanKey, paper: row.paper })
       .eq('id', row.id)
       .select('id,user_id,project_number,paper,topic,saved_at')
       .single();
