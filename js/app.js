@@ -18,14 +18,14 @@ const UNCATEGORIZED_TOPIC = "uncategorized";
 // identifiers stored on each project; the display label can be renamed by
 // an admin (see topicLabels / loadTopicLabels / renameTopic).
 const DEFAULT_TOPICS = [
+  { key: UNCATEGORIZED_TOPIC, label: "Uncategorized" },
   { key: "history_culture", label: "History & Culture" },
   { key: "geography", label: "Geography" },
   { key: "polity_governance", label: "Polity & Governance" },
   { key: "economy", label: "Economy" },
   { key: "environment", label: "Environment" },
   { key: "science_tech", label: "Science & Technology" },
-  { key: "current_affairs", label: "Current Affairs" },
-  { key: UNCATEGORIZED_TOPIC, label: "Uncategorized" }
+  { key: "current_affairs", label: "Current Affairs" }
 ];
 let topicLabels = {}; // topic key -> admin-renamed label (overrides the default above)
 let supabaseClient = null;
