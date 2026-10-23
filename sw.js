@@ -4,7 +4,7 @@
 // old, buggy version of index.html/app.js/admin.js to be served over a newer
 // deployed one. Bump CACHE_VERSION whenever you want to force clients to
 // drop old cached files.
-const CACHE_VERSION = 'prelimsify-v4';
+const CACHE_VERSION = 'prelimsify-v6';
 const OFFLINE_URL = 'offline.html';
 
 const PRECACHE = [
@@ -17,7 +17,8 @@ const PRECACHE = [
   'js/admin.js',
   'manifest.json',
   'icons/icon-192.png',
-  'icons/icon-512.png'
+  'icons/icon-512.png',
+  'assets/images/logo.png'
 ];
 
 self.addEventListener('install', (event) => {

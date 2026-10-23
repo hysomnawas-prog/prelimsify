@@ -15,7 +15,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Prelimsify">
-<link rel="stylesheet" href="css/styles.css?v=20260916">
+<link rel="stylesheet" href="css/styles.css?v=20261023">
 </head>
 <body>
 <script>
@@ -28,7 +28,7 @@ if ('serviceWorker' in navigator) {
 
 <div class="home-screen" id="homeScreen">
   <div class="home-content">
-    <h1>p5</h1>
+    <h1 class="home-logo"><img src="assets/images/logo.png" alt="p5" width="160" height="160"></h1>
     <p>The recaller</p>
     <div class="auth-gate" id="authGate">
       <button class="btn" id="loginBtn" type="button">Login</button>
@@ -93,6 +93,7 @@ if ('serviceWorker' in navigator) {
 
 <div class="app-shell" id="appShell">
 <div class="masthead">
+  <img class="masthead-logo" src="assets/images/logo.png" alt="p5" width="36" height="36">
   <button class="masthead-home-btn" id="mastheadHomeBtn" type="button" title="Home" aria-label="Home">⌂</button>
   <div class="eyebrow" id="eyebrowText"></div>
   <h1 id="titleText">prelimsify</h1>
