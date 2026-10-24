@@ -1167,9 +1167,11 @@ document.getElementById('fileInput').addEventListener('change', function(e){
   const reader = new FileReader();
   reader.onload = function(ev){
     const text = String(ev.target.result || '');
-    if (file.name.toLowerCase().endsWith('.hysom')){
+    const lname = file.name.toLowerCase();
+    const looksJson = lname.endsWith('.json') || /^\s*[\[{]/.test(text);
+    if (!looksJson){
       document.getElementById('hysomInput').value = text;
-      setLoaderMsg('.hysom file loaded — click "Load .hysom Format" to apply.', true);
+      setLoaderMsg('Question file loaded — click "Load .hysom Format" to apply.', true);
     } else {
       document.getElementById('jsonInput').value = text;
       setLoaderMsg('JSON file loaded — click "Load JSON" to apply.', true);
@@ -1183,43 +1185,66 @@ function cleanHysomLine(line){
 }
 
 function parseHysom(text){
-  const normalized = String(text || '').replace(/\r\n?/g, '\n').trim();
+  let normalized = String(text || '').replace(/\r\n?/g, '\n').replace(/\*\*/g, '').trim();
   if (!normalized) throw new Error('Paste a .hysom question set first.');
 
-  // Supported headings: Q1., Q2., ... and numeric headings such as 100., 101., ...
-  const starts = [...normalized.matchAll(/(?:^|\n)[ \t]*(?:Q\s*\d+|\d{2,})\.\s*/gi)];
-  if (!starts.length) throw new Error('No question headings found. Start questions with Q1. or 1., 100., etc.');
+  // Walk line by line. "## SECTION ..." headings become section dividers; any
+  // other markdown heading (title, "How to use these") ends the current question.
+  const blocks = [];   // {section:'..'} or {heading:'Q1.', text:'...'}
+  let cur = null;
+  normalized.split('\n').forEach(line => {
+    const h = line.match(/^[ \t]*#{1,6}[ \t]*(.*?)[ \t]*$/);
+    if (h){
+      cur = null;
+      if (/^SECTION\b/i.test(h[1])) blocks.push({ section: h[1] });
+      return;
+    }
+    const q = line.match(/^[ \t]*((?:Q\s*\d+|\d{2,})\.)[ \t]*(.*)$/i);
+    if (q){
+      cur = { heading: q[1], lines: [q[2]] };
+      blocks.push(cur);
+      return;
+    }
+    if (cur) cur.lines.push(line);
+  });
+  if (!blocks.some(b => b.heading)) throw new Error('No question headings found. Start questions with Q1. or 1., 100., etc.');
 
   const questions = [];
-  for (let i = 0; i < starts.length; i++) {
-    const start = starts[i].index + (starts[i][0].startsWith('\n') ? 1 : 0);
-    const end = i + 1 < starts.length ? starts[i + 1].index : normalized.length;
-    const heading = starts[i][0].trim();
-    const block = normalized.slice(start, end).replace(/^(?:Q\s*\d+|\d{2,})\.\s*/i, '').trim();
+  let qn = 0;
+  blocks.forEach(b => {
+    if (b.section){ questions.push({ s: b.section }); return; }
+    qn++;
+    const heading = b.heading;
+    const block = b.lines.join('\n').trim();
 
     // Accept both "Correct Answer: A. ..." and "Answer: (d) ...".
-    const answerMatch = block.match(/(?:^|\n)[ \t]*\*{0,2}(?:Correct Answer|Answer)\s*:\s*(?:\(?([A-Da-d])\)?)(?:\.\s*)?(.*?)\*{0,2}[ \t]*(?=\n|$)/i);
-    if (!answerMatch) throw new Error(`Question ${i + 1} (${heading}): missing an Answer/Correct Answer line.`);
+    const answerMatch = block.match(/(?:^|\n)[ \t]*(?:Correct Answer|Answer)\s*:\s*(?:\(?([A-Da-d])\)?)(?:\.\s*)?(.*?)[ \t]*(?=\n|$)/i);
+    if (!answerMatch) throw new Error(`Question ${qn} (${heading}): missing an Answer/Correct Answer line.`);
     const answer = answerMatch[1].toUpperCase();
 
     const beforeAnswer = block.slice(0, answerMatch.index).trim();
     // Accept A. / B. / C. / D. and (a) / (b) / (c) / (d).
-    const optionMatches = [...beforeAnswer.matchAll(/(?:^|\n)[ \t]*\*{0,2}(?:\(([A-Da-d])\)|([A-Da-d])\.)[ \t]*(.*?)\*{0,2}[ \t]*$/gim)];
-    if (optionMatches.length < 2) throw new Error(`Question ${i + 1} (${heading}): could not find answer options A-D.`);
+    const optionMatches = [...beforeAnswer.matchAll(/(?:^|\n)[ \t]*(?:\(([A-Da-d])\)|([A-Da-d])\.)[ \t]*(.*?)[ \t]*$/gim)];
+    if (optionMatches.length < 2) throw new Error(`Question ${qn} (${heading}): could not find answer options A-D.`);
 
     const firstOptionPos = optionMatches[0].index + (optionMatches[0][0].startsWith('\n') ? 1 : 0);
-    let questionText = beforeAnswer.slice(0, firstOptionPos).trim();
-    questionText = questionText.replace(/^\*+|\*+$/g, '').trim();
+    const questionText = beforeAnswer.slice(0, firstOptionPos).trim();
 
     const opts = {};
     optionMatches.forEach(m => {
       const letter = (m[1] || m[2]).toUpperCase();
       opts[letter] = cleanHysomLine(m[3]);
     });
+    if (!opts[answer]) throw new Error(`Question ${qn} (${heading}): correct answer ${answer} is not one of the options.`);
 
-    if (!opts[answer]) throw new Error(`Question ${i + 1} (${heading}): correct answer ${answer} is not one of the options.`);
-    questions.push({ q: questionText, o: opts, a: answer });
-  }
+    // Optional explanation after the answer line.
+    const afterAnswer = block.slice(answerMatch.index + answerMatch[0].length);
+    const exMatch = afterAnswer.match(/(?:^|\n)[ \t]*Explanation\s*:\s*([\s\S]*)$/i);
+    const item = { q: questionText, o: opts, a: answer };
+    const explanation = exMatch ? exMatch[1].trim() : '';
+    if (explanation) item.e = explanation;
+    questions.push(item);
+  });
 
   validateData(questions);
   return questions;
@@ -1650,6 +1675,18 @@ function buildQuiz(restoreState = false){
     const fb = document.createElement('div');
     fb.className = 'feedback';
 
+    // Explanation (optional, from the "e" field) — revealed once an option is chosen.
+    const expl = document.createElement('div');
+    expl.className = 'explanation';
+    const showExplanation = () => {
+      if (!item.e) return;
+      expl.innerHTML = '<strong>Explanation</strong>';
+      const body = document.createElement('div');
+      body.textContent = String(item.e);
+      expl.appendChild(body);
+      expl.classList.add('show');
+    };
+
     Object.keys(item.o).forEach(letter => {
       const btn = document.createElement('button');
       btn.className = 'opt';
@@ -1690,6 +1727,7 @@ function buildQuiz(restoreState = false){
           fb.textContent = `Incorrect — correct answer is ${item.a}. ${MARK_WRONG.toFixed(2)}`;
           fb.className = 'feedback wrong';
         }
+        showExplanation();
         updateScore();
         if (!restoringSession) saveTestSession();
       };
@@ -1717,6 +1755,7 @@ function buildQuiz(restoreState = false){
           fb.className = 'feedback wrong';
           answered++; wrongCount++; marks += MARK_WRONG;
         }
+        showExplanation();
       }
     }
 
@@ -1739,6 +1778,7 @@ function buildQuiz(restoreState = false){
 
     card.appendChild(optsWrap);
     card.appendChild(fb);
+    card.appendChild(expl);
     card.appendChild(controls);
     root.appendChild(card);
   });
