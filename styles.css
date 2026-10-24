@@ -728,6 +728,14 @@
   .opt.locked{ cursor:default; }
   .opt.locked:hover{ transform:none; box-shadow:none; }
   .opt.dim{ opacity:.55; }
+  .qtext{ white-space:pre-line; }
+  .explanation{
+    display:none; margin-top:10px; padding:10px 14px; border-radius:14px;
+    background:rgba(255,255,255,.65); border:1px solid var(--glass-border);
+    font-size:13.5px; line-height:1.55; text-align:left; white-space:pre-line;
+  }
+  .explanation.show{ display:block; }
+  .explanation strong{ display:block; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:4px; }
   .feedback{
     font-family:var(--sans);
     font-size:12px;

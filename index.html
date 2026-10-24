@@ -15,7 +15,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Prelimsify">
-<link rel="stylesheet" href="css/styles.css?v=20261024">
+<link rel="stylesheet" href="css/styles.css?v=20261024a">
 </head>
 <body>
 <script>
@@ -106,7 +106,7 @@ if ('serviceWorker' in navigator) {
     <label for="jsonInput">Paste question JSON</label>
     <textarea id="jsonInput" placeholder='[{"s":"Section title"},{"q":"Question text","o":{"A":"opt A","B":"opt B","C":"opt C","D":"opt D"},"a":"B"}]'></textarea>
     <div class="loader-row">
-      <input type="file" id="fileInput" accept=".json,.hysom,application/json,text/plain">
+      <input type="file" id="fileInput" accept=".json,.hysom,.md,.txt,application/json,text/plain,text/markdown">
       <button class="btn" onclick="loadFromTextarea()">Load JSON</button>
     </div>
 
@@ -130,7 +130,7 @@ D. 1, 2 and 3
 **Correct Answer: A. 1 and 2 only**"></textarea>
     <div class="loader-row">
       <button class="btn" onclick="loadHysomFromTextarea()">Load .hysom Format</button>
-      <span class="loader-hint">Use Q1. or 100. style headings; options may be A./B./C./D. or (a)/(b)/(c)/(d), followed by <code>Answer: (d) ...</code> or <code>Correct Answer: A. ...</code></span>
+      <span class="loader-hint">Use Q1. or 100. style headings; options may be A./B./C./D. or (a)/(b)/(c)/(d), followed by <code>Answer: (d)</code> or <code>Correct Answer: A. ...</code>, then an optional <code>Explanation: ...</code>. <code>## SECTION ...</code> headings become section dividers.</span>
     </div>
     <div class="loader-row">
       <label style="font-weight:400;">Time limit (minutes):</label>
@@ -231,6 +231,6 @@ D. 1, 2 and 3
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/app.js?v=20260916c"></script>
+<script src="js/app.js?v=20261024a"></script>
 </body>
 </html>
